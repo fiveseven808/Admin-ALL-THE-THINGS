@@ -4,7 +4,7 @@ AATT: Admin ALL THE THINGS!
 
 ![alt text](https://raw.githubusercontent.com/fiveseven808/Admin-ALL-THE-THINGS/master/Screens/main_screen.png "Welcome to ALL THE THINGS!")
 
-###### Image coming soon!
+###### Leverage PSTools for remote administration with ease! 
 
 ## Summary: Updated 7/31/2017
 AATT or, Admin ALL THE THINGS! Is a free and open-source AutHotKey based program written to leverage PSTools in a GUI oriented manner. This allows for quick administrative and arbitrary tasks to be deployed and run on remote computers. 
