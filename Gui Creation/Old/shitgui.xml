@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gui>
+	<control>
+		<control g="" h="15" hwnd="5113768" options="-Wrap Center" reload="1" style="" type="Text" v="" value="Admin ALL THE THINGS" w="154" x="7" y="18"></control>
+		<control g="" h="21" hwnd="918454" options="1 Uppercase" reload="1" style="" type="Edit" v="computername" value="Computer Name" w="109" x="28" y="50"></control>
+		<control g="" h="23" hwnd="1180622" options="Default" reload="1" style="" type="Button" v="" value="Apply" w="43" x="61" y="76"></control>
+		<control g="" h="18" hwnd="591582" options="" reload="1" style="" type="Text" v="" value="---------------------------------------------------" w="163" x="6" y="32"></control>
+		<control g="ButtonEnableThreatening" h="23" hwnd="983976" options="" reload="1" style="" type="Button" v="" value="Enable Threatening" w="109" x="32" y="173"></control>
+		<control g="ButtonGetIdleTime" h="24" hwnd="787170" options="" reload="1" style="" type="Button" v="" value="Get User Idle Time" w="109" x="32" y="205"></control>
+		<control g="ButtonSendThreat" h="24" hwnd="1115068" options="" reload="1" style="" type="Button" v="" value="Send Threat" w="96" x="39" y="237"></control>
+		<control g="ButtonRebootClient" h="23" hwnd="983972" options="" reload="1" style="" type="Button" v="" value="Reboot Client" w="112" x="33" y="627"></control>
+		<control g="" h="31" hwnd="983994" options="0x1000 Center" reload="1" style="" type="Text" v="thecontrolled" value="Current controlled Computer is `n%computername%" w="157" x="8" y="106"></control>
+		<control g="ButtonShutdownClient" h="23" hwnd="3213132" options="" reload="1" style="" type="Button" v="" value="Shutdown Client" w="113" x="33" y="657"></control>
+		<control g="ButtonPingForever" h="25" hwnd="4785430" options="" reload="1" style="" type="Button" v="" value="Ping Forever" w="115" x="32" y="685"></control>
+		<control g="ButtonArbitraryFile" h="22" hwnd="657130" options="" reload="1" style="" type="Button" v="" value="Run Arbitrary File" w="114" x="31" y="309"></control>
+		<control g="ButtonRunFresh" h="26" hwnd="2557434" options="" reload="1" style="" type="Button" v="" value="Run Fresh Image Install" w="160" x="8" y="337"></control>
+		<control g="ButtonQueryUpdates" h="26" hwnd="1115008" options="" reload="1" style="" type="Button" v="" value="Query for Updates" w="139" x="19" y="477"></control>
+		<control g="ButtonViewProcs" h="24" hwnd="1115006" options="" reload="1" style="" type="Button" v="" value="Current Processes" w="124" x="27" y="401"></control>
+		<control g="ButtonPSKill" h="25" hwnd="1049560" options="" reload="1" style="" type="Button" v="" value="Kill Process" w="83" x="48" y="430"></control>
+		<control g="ButtonExplore" h="26" hwnd="788198" options="" reload="1" style="" type="Button" v="" value="Open in Explorer" w="159" x="8" y="369"></control>
+		<control g="ButtonRunUpdates" h="24" hwnd="591608" options="" reload="1" style="" type="Button" v="" value="Run Updates" w="103" x="39" y="512"></control>
+		<control g="ButtonPSinfoApps" h="25" hwnd="787230" options="" reload="1" style="" type="Button" v="" value="View Installed Apps" w="152" x="12" y="547"></control>
+		<control g="" h="18" hwnd="1115058" options="" reload="1" style="" type="Text" v="" value="---------------------------------------------------" w="163" x="11" y="291"></control>
+		<control g="" h="18" hwnd="394244" options="" reload="1" style="" type="Text" v="" value="---------------------------------------------------" w="163" x="11" y="457"></control>
+		<control g="" h="18" hwnd="394246" options="" reload="1" style="" type="Text" v="" value="---------------------------------------------------" w="163" x="12" y="580"></control>
+		<control g="ButtonChat" h="23" hwnd="3408916" options="" reload="1" style="" type="Button" v="" value="Chat" w="43" x="64" y="267"></control>
+		<control g="ButtonCleanup" h="23" hwnd="394242" options="" reload="1" style="" type="Button" v="" value="Cleanup Files" w="112" x="33" y="598"></control>
+		<control g="ButtonMSTSC" h="23" hwnd="459784" options="" reload="1" style="" type="Button" v="" value="Remote In" w="109" x="32" y="145"></control>
+		<control g="" h="18" hwnd="6227742" options="" reload="1" style="" type="Text" v="" value="---------------------------------------------------" w="163" x="12" y="713"></control>
+		<control g="ButtonHotkeyInfo" h="25" hwnd="4654618" options="" reload="1" style="" type="Button" v="" value="HotKey Help" w="115" x="32" y="729"></control>
+	</control>
+	<groupbox>
+	</groupbox>
+	<show h="765" w="175" x="889" y="54"></show>
+	<tab>
+	</tab>
+</gui>
