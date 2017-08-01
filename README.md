@@ -1,9 +1,8 @@
 AATT: Admin ALL THE THINGS! 
 =============
-## AutHotKey and PSTools based remote administration tool for Active Domain based networks
+## AutoHotKey and PSTools based remote administration tool for Active Domain based networks
 
-[//]: # ([![Learn About the hueBerry!](http://i.imgur.com/zl9XxJq.jpg)](https://youtu.be/YTvbsL82ZcM?t=1m3s "hueBerry is awesome!"))
-[//]: # (Need to update this link and image with an AATT one)
+![alt text](https://raw.githubusercontent.com/fiveseven808/Admin-ALL-THE-THINGS/master/Screens/main_screen.png "Welcome to ALL THE THINGS!")
 
 ###### Image coming soon!
 
