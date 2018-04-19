@@ -6,32 +6,38 @@ SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 #SingleInstance Force
 /*
 ADMIN ALL THE THINGS!!!! (AATT)
-This script is an interface to deal with unruly users and to give them a heads up and admin them if they get too cocky :D
+What is this?
+	AATT is an AHK based program that aims to provide a low investment, low privileged GUI for remote computer system maintenance
+	Originally designed to remotely run and install updates using sysinternal tools like PSEXEC, I plan on extending AATTs ability
+	via powershell to make use of Windows APIs to help clean things up a bit... 
+	
+How to use?
+	Doesn't matter if you're admin on your systems or not. 
+	Doesn't need install rights, just need to get the program on a machine on the network. 
+	
+How to fix?
+	Search for the tag "BREAKFIX" to see in-line errors reported
 
 Changelog:
-1001
-	- updated flash 14 to flash 15. added delete entry and changed freshimagedomeadminahk
-1010
-	- added encryption to the program. now the username and password are not stored in plaintext. this is only useful if the program becomes compiled though lol.
-	- added a change user button. 
-	- deleted the useless save button
-	x bug still includes having to hit "load" before you try to delete anything (double right click) 
-1020
-	- fixed the tooltip bug where the tooltips dont go away after deleting an entry
-	- began preparing program for deployment as i'm not going to be working at client soon. 
-1021
-	- Security issues a bit... fixed some... 
-	- making windows update let you know when the computer is supposedly back online
-1022
-	- Enabling much easier to change stuff... planning on finally compiling this... 
-1028
-	- Changed up-enc.ahk to include DOMAIN when it asks for username
-1029
-	- Added error check for client program installer when appending to file
-	- added the ability to specify where the log file is going and what is it called
-	- Added ini capability to the prgoram installer (requires copy on run though lol)
+180418:
+	-	Disabled the GetUpdateStatus subroutine, which was doing a smb check of a computer... 
+		Not relevant to general recon, and slows the program down.
+	- 	I remember there was a bug where over time, the IPs slowly end up on the "dead" list and 
+		Would never come back up and start pinging again... You would have to manually hit "Refresh" 
+		I tried to fix this by adding a timer in the routine, but it seems like it never ran
+		I finally figured this out LOL. "Should be fixed"... 
+	- 	Tried overhauling GetIP, kinda failed. The Overhaul is unstable...
+		Instead I modified GetIP to also get ping times
+	-	Modified Gui table to have ping times! Finally! 
+		Replaced Comp ON status (kinda useless since the top is on and the bottom is off anyway)
+	- 	Updates Running says Disabled now... placeholder for a new function? 
+		
+180417:
+	-	First look after not touching this program in like 4 years... 
+		Gonna try and clean it up so it is usable in my new job
+		I completely forgot a git repo was made for this already lol 
 Bugs: 
-	- none that i see at the moment 
+	- 	I assume that everything is broken... 
 	
 */
 Gui +Resize
@@ -77,7 +83,7 @@ Gui,Add,Button,x203 y294 w112 h23 gButtonCleanup,Cleanup Files
 Gui,Add,Button,x32 y171 w109 h23 gButtonMSTSC,Remote In
 Gui,Add,Text,x182 y409 w163 h18,---------------------------------------------------
 Gui,Add,Button,x202 y425 w115 h25 gButtonHotkeyInfo,HotKey Help
-Gui,Add,ListView,x346 y11 w449 h300 vLiveCompList gMyListView AltSubmit Checked Grid,Computer Name|IP Address IPV4|Updates Running|Computer On|Last Seen
+Gui,Add,ListView,x346 y11 w449 h300 vLiveCompList gMyListView AltSubmit Checked Grid,Computer Name|IP Address IPV4|Updates Running|Ping|Last Seen
 Gui,Add,Button,x173 y76 w50 h23 gRefreshListView,Refresh
 Gui,Add,ListView,x346 y323 w449 h185 vDeadCompList gMyListView2 AltSubmit Checked Grid,Computer Name|IP Address IPV4|Updates Running|Line|Last Seen
 Gui,Add,Text,x9 y147 w322 h18,---------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -85,14 +91,18 @@ Gui,Add,Button,x34 y60 w43 h23 gButtonLoad,Load
 Gui,Add,Button,x257 y56 w59 h36 gButtonChangeUser,Change User
 Gui,Show, w811 h521 ,
 	Sleep 500
-	Gosub ButtonLoad
+	Gosub ButtonLoad ; MAIN: This subroutine starts FreshLoad which starts the timers to do the computer refresh background task. 
 	;LV_ModifyCol()  ; Auto-size each column to fit its contents.
 	LV_ModifyCol(2, "Integer")  ; For sorting purposes, indicate that column 2 is an integer.
 Return
 }
 
 ButtonLoad:
+	SetTimer, QuickieFreshLV, off
+	SetTimer, FreshLoad, off
 	File = CompList.txt
+	SetTimer, QuickieFreshLV, 5001
+	SetTimer, FreshLoad, 60000
 	Gosub FreshLoad
 Return
 
@@ -181,7 +191,7 @@ return
 
 FreshLoad:
 	SetTimer, QuickieFreshLV, off
-	SetTimer, RefreshListView, off
+	SetTimer, RefreshListView, off																
 	Gui, ListView, DeadCompList
 	LV_Delete()
 	Gui, ListView, LiveCompList
@@ -199,9 +209,11 @@ FreshLoad:
 			Break
 		tempcompread := A_LoopField
 		Gosub GetIP 																			;Retrieves ComputerUpAddr and CompOn and LastSeen
-		If CompOn = 1
+		 If (CompOn = 1){
 			Gosub GetUpdatestatus 																;Retrieves If computer is on and updating currently.
-		LV_Add("", tempcompread, ComputerUpAddr, UPStatus, CompOn, LastSeen)
+			;LastSeen := A_Hour . ":" . A_Min . ":" . A_Sec 
+		 }
+		LV_Add("", tempcompread, ComputerUpAddr, UPStatus, PingTime, LastSeen)
 		}
 																								;Finished Importing data from file
 	Gosub QuickieFreshLV																		;Parse out the Null computers and quick refresh list at the same time?
@@ -209,9 +221,17 @@ FreshLoad:
 	SetTimer, RefreshListView, 60000
 Return
 
+/*
+RefreshListView is a sub that I'm not sure what it used to do....
+It might've been an attempt to refresh the dead computers? 
+But I've depreciated it and substituted the function to do a fresh load
+This is currently set to run every minute. So a dead machine will eventually come back to live after a minute. The main problem with this is that the LastSeen variable will also get updated when a FreshLoad happens
+BREAKFIX:
+	- Broke the LastSeen time by making it FreshLoad every time... Need to make an exception... 
+*/
 RefreshListView:
-	;msgbox, starting refresh at %a_now%
-	SetTimer, QuickieFreshLV, off
+	msgbox, starting refresh at %a_now%
+	/*SetTimer, QuickieFreshLV, off
 	SetTimer, RefreshListView, off
 	Gui, ListView, LiveCompList
 		tempcount := lv_getcount()
@@ -220,13 +240,13 @@ RefreshListView:
 			LV_GetText(tempcompread, A_Index) 
 			LV_GetText(ComputerUpAddr, A_Index, 2) 
 			LV_GetText(UPStatus, A_Index,3) 
-			LV_GetText(CompOn, A_Index,4)
+			LV_GetText(PingTime, A_Index,4)
 			LV_GetText(LastSeen, A_Index,5)
 			;msgbox, %A_Index% with name %tempcompread% is being processed row number %A_EventInfo%. Computer: "%tempcompread%" IP: "%ComputerUpAddr%" Updating: "%UPStatus%" Computer on: "%CompOn%"
 				Gosub GetIP 
 				If CompOn = 1
 					Gosub GetUpdatestatus 		;Retrieves If computer is on and updating currently.
-			LV_Modify(A_Index,,tempcompread,ComputerUpAddr,UPStatus,CompOn,LastSeen)
+			LV_Modify(A_Index,,tempcompread,ComputerUpAddr,UPStatus,PingTime,LastSeen)
 		}	
 	;MSGBOX, FINISHED WITH LIVECOMPLIST
 	Gui, ListView, DeadCompList
@@ -238,20 +258,22 @@ RefreshListView:
 			LV_GetText(tempcompread, FromTheBot) 
 			LV_GetText(ComputerUpAddr, FromTheBot, 2) 
 			LV_GetText(UPStatus, FromTheBot,3) 
-			LV_GetText(CompOn, FromTheBot,4)
+			LV_GetText(PingTime, FromTheBot,4)
 			LV_GetText(LastSeen, FromTheBot,5)
 			;msgbox, fromthebot = %FromTheBot%`ntempcompread = %tempcompread%
 			Gosub GetIP 
 			If (ComputerUpAddr != "Null")
 			{
 				Gui, ListView, LiveCompList
-				LV_Add("", tempcompread, ComputerUpAddr, UPStatus, CompOn, LastSeen)
+				LV_Add("", tempcompread, ComputerUpAddr, UPStatus, PingTime, LastSeen)
 				Gui, ListView, DeadCompList
 				LV_Delete(FromTheBot)
 			}
 		}	
 	SetTimer, QuickieFreshLV, 5001
 	SetTimer, RefreshListView, 60000
+	*/
+	gosub FreshLoad
 Return
 
 
@@ -274,11 +296,11 @@ QuickieGuts:
 		LV_GetText(tempcompread, A_Index, 1)  ; Get the text from the row's first field.
 		LV_GetText(ComputerUpAddr, A_Index, 2) 
 		LV_GetText(UPStatus, A_Index,3) 
-		LV_GetText(CompOn, A_Index,4)
+		LV_GetText(PingTime, A_Index,4)
 		LV_GetText(LastSeen, A_Index,5)
 		;msgbox, quicking this %tempcompread% at index %a_index%
 		If (ComputerUpAddr != "Null")
-			Gosub GetIP 					;Retrieves ComputerUpAddr and CompOn and LastSeen
+			Gosub GetIP 					;Retrieves ComputerUpAddr and PingTime and LastSeen
 		Else If (ComputerUpAddr = "Null")
 			{
 			;msgbox, foudn a null. %tempcompread%
@@ -320,7 +342,7 @@ QuickieGuts:
 			}
 		If CompOn = 1
 			Gosub GetUpdatestatus 		;Retrieves If computer is on and updating currently.
-		LV_Modify(A_Index,,tempcompread,ComputerUpAddr,UPStatus,CompOn,LastSeen)
+		LV_Modify(A_Index,,tempcompread,ComputerUpAddr,UPStatus,PingTime,LastSeen)
 	}
 Return
 
@@ -350,10 +372,12 @@ return
 
 GetIP:
 	#Include GetIP.ahk
+	;#Include GetIP_2018Overhaul.ahk						;Experimental.... Seems to corrupt tables much quicker than the old version. 
 Return
 
 GetUpdatestatus:
-	#Include GetUpdateStatus.ahk
+	;#Include GetUpdateStatus.ahk																	;Turning this off because this was a specialized case for a specific environment
+	UPStatus := "Disabled"																			;Setting the return/calculated value manually 
 Return
 
 ;----------------------------------------------------------------------

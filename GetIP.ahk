@@ -13,6 +13,7 @@ PingErr5:="Ping Request could not find host"
 
 ; tempcompread = d3410ln43
 ComputerUPAddr = Null
+UPStatus := Null
 CheckComp:
 	Loop
 	{
@@ -57,6 +58,10 @@ CheckComp:
 		   ;msgbox, failed %PingErr5%
 		   Break
 		 }
+		if (A_Index == 3) {
+			RegExMatch(PingLine, "O)(?=|<)\d*ms", time)
+			PingTime := time.Value()
+		}
 		StringGetPos, locat, PingLine, for, R
 		;msgbox locat is %locat%
 		if (locat < 0)
@@ -64,6 +69,7 @@ CheckComp:
 		locat := locat + 4
 		stringmid, ComputerUPAddr, PingLine, locat
 		StringTrimRight, ComputerUPAddr, ComputerUPAddr, 1
+		
 		CompOn = 1
 
 		Break
