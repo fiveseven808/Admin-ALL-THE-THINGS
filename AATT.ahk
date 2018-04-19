@@ -19,6 +19,15 @@ How to fix?
 	Search for the tag "BREAKFIX" to see in-line errors reported
 
 Changelog:
+180418_2:
+	-	Second commit of the day! Because I'm way too excited
+	-	FIXED THE STUPID BUG!!!! 
+	-	So you know, after X amount of minutes, things go to shit and nothing made sense in the dead pile... you would have to do a fresh load? Turns out, that was because it tried to check the dead computers in the middle of a quickie... Fixed that race condition by adding a check before running dead computer check. 
+		-	A better solution would be to incorporate a scheduler that takes button inputs and schedules them instead of tries to run them ASAP... This program is way too simple to add a scheduler though LOL. 
+		-	For now, the user may have to click on "Refresh Dead" more than once, or wait until the Status is "Idle", otherwise their request will be blocked.
+	- 	Turns out, I had a hunch about the above, and verified it by writing a status indicator so I know what the program is doing without having to watch the output lol. 
+	- 	RefreshListView has been depreciated and replaced with DeadCheckLV which makes much more sense
+
 180418:
 	-	Disabled the GetUpdateStatus subroutine, which was doing a smb check of a computer... 
 		Not relevant to general recon, and slows the program down.
@@ -40,6 +49,9 @@ Bugs:
 	- 	I assume that everything is broken... 
 	
 */
+QuickRefreshInterval := 5001
+DeadRefreshInterval := 60000
+
 Gui +Resize
 computername = NULL
 	#Include UP_DEC.ahk
@@ -56,40 +68,41 @@ computername = NULL
 
 Blahgui:
 {
-Gui,Add,Text,x93 y18 w154 h15 -Wrap Center,Admin ALL THE THINGS v3
+Gui,Add,Text,x65 y18 w204 h15 -Wrap Center,Admin ALL THE THINGS v4.1804.18
 Gui,Add,Edit,x114 y50 w109 h21 vcomputername 1 Uppercase,Computer Name
-Gui,Add,Button,x113 y76 w43 h23 Default,Add
+Gui,Add,Button,x101 y76 w43 h23 Default,Add
 Gui,Add,Text,x92 y32 w163 h18,---------------------------------------------------
-Gui,Add,Button,x32 y199 w109 h23 gButtonEnableThreatening,Enable Threatening
-Gui,Add,Button,x32 y231 w109 h24 gButtonGetIdleTime,Get User Idle Time
-Gui,Add,Button,x39 y263 w96 h24 gButtonSendThreat,Send Threat
-Gui,Add,Button,x203 y323 w112 h23 gButtonRebootClient,Reboot Client
+Gui,Add,Button,x32 y220 w109 h23 gButtonEnableThreatening,Enable Threatening
+Gui,Add,Button,x32 y252 w109 h24 gButtonGetIdleTime,Get User Idle Time
+Gui,Add,Button,x39 y284 w96 h24 gButtonSendThreat,Send Threat
+Gui,Add,Button,x203 y344 w112 h23 gButtonRebootClient,Reboot Client
 Gui,Add,Text,x8 y110 w330 h33 vthecontrolled 0x1000 Center,Current controlled Computer is `n%computername%
-Gui,Add,Button,x203 y353 w113 h23 gButtonShutdownClient,Shutdown Client
-Gui,Add,Button,x202 y381 w115 h25 gButtonPingForever,Ping Forever
-Gui,Add,Button,x31 y335 w114 h22 gButtonArbitraryFile,Run Arbitrary File
-Gui,Add,Button,x8 y363 w160 h26 gButtonRunFresh,Run Fresh Image Install
-Gui,Add,Button,x189 y173 w139 h26 gButtonQueryUpdates,Query for Updates
-Gui,Add,Button,x27 y427 w124 h24 gButtonViewProcs,Current Processes
-Gui,Add,Button,x48 y456 w83 h25 gButtonPSKill,Kill Process
-Gui,Add,Button,x8 y395 w159 h26 gButtonExplore,Open in Explorer
-Gui,Add,Button,x206 y208 w103 h24 gButtonRunUpdates,Run Updates
-Gui,Add,Button,x182 y243 w152 h25 gButtonPSinfoApps,View Installed Apps
-Gui,Add,Text,x11 y317 w163 h18,---------------------------------------------------
-Gui,Add,Text,x9 y488 w322 h18,---------------------------------------------------------------------------------------------------------------------------------------------------------
-Gui,Add,Text,x182 y276 w163 h18,---------------------------------------------------
-Gui,Add,Button,x64 y293 w43 h23 gButtonChat,Chat
-Gui,Add,Button,x203 y294 w112 h23 gButtonCleanup,Cleanup Files
-Gui,Add,Button,x32 y171 w109 h23 gButtonMSTSC,Remote In
-Gui,Add,Text,x182 y409 w163 h18,---------------------------------------------------
-Gui,Add,Button,x202 y425 w115 h25 gButtonHotkeyInfo,HotKey Help
+Gui,Add,Text,x8 y150 w330 h17 vStatusBox 0x1000 Center,Status: %computername%
+Gui,Add,Button,x203 y374 w113 h23 gButtonShutdownClient,Shutdown Client
+Gui,Add,Button,x202 y402 w115 h25 gButtonPingForever,Ping Forever
+Gui,Add,Button,x31 y356 w114 h22 gButtonArbitraryFile,Run Arbitrary File
+Gui,Add,Button,x8 y384 w160 h26 gButtonRunFresh,Run Fresh Image Install
+Gui,Add,Button,x189 y194 w139 h26 gButtonQueryUpdates,Query for Updates
+Gui,Add,Button,x27 y448 w124 h24 gButtonViewProcs,Current Processes
+Gui,Add,Button,x48 y477 w83 h25 gButtonPSKill,Kill Process
+Gui,Add,Button,x8 y416 w159 h26 gButtonExplore,Open in Explorer
+Gui,Add,Button,x206 y229 w103 h24 gButtonRunUpdates,Run Updates
+Gui,Add,Button,x182 y264 w152 h25 gButtonPSinfoApps,View Installed Apps
+Gui,Add,Text,x11 y338 w163 h18,---------------------------------------------------
+Gui,Add,Text,x9 y509 w322 h18,---------------------------------------------------------------------------------------------------------------------------------------------------------
+Gui,Add,Text,x182 y297 w163 h18,---------------------------------------------------
+Gui,Add,Button,x64 y314 w43 h23 gButtonChat,Chat
+Gui,Add,Button,x203 y315 w112 h23 gButtonCleanup,Cleanup Files
+Gui,Add,Button,x32 y192 w109 h23 gButtonMSTSC,Remote In
+Gui,Add,Text,x182 y430 w163 h18,---------------------------------------------------
+Gui,Add,Button,x202 y446 w115 h25 gButtonHotkeyInfo,HotKey Help
 Gui,Add,ListView,x346 y11 w449 h300 vLiveCompList gMyListView AltSubmit Checked Grid,Computer Name|IP Address IPV4|Updates Running|Ping|Last Seen
-Gui,Add,Button,x173 y76 w50 h23 gRefreshListView,Refresh
-Gui,Add,ListView,x346 y323 w449 h185 vDeadCompList gMyListView2 AltSubmit Checked Grid,Computer Name|IP Address IPV4|Updates Running|Line|Last Seen
-Gui,Add,Text,x9 y147 w322 h18,---------------------------------------------------------------------------------------------------------------------------------------------------------
+Gui,Add,Button,x156 y76 w78 h23 gDeadCheckLV,Refresh Dead
+Gui,Add,ListView,x346 y323 w449 h195 vDeadCompList gMyListView2 AltSubmit Checked Grid,Computer Name|IP Address IPV4|Updates Running|Line|Last Seen
+Gui,Add,Text,x9 y168 w322 h18,---------------------------------------------------------------------------------------------------------------------------------------------------------
 Gui,Add,Button,x34 y60 w43 h23 gButtonLoad,Load
 Gui,Add,Button,x257 y56 w59 h36 gButtonChangeUser,Change User
-Gui,Show, w811 h521 ,
+Gui,Show, w811 h536 ,
 	Sleep 500
 	Gosub ButtonLoad ; MAIN: This subroutine starts FreshLoad which starts the timers to do the computer refresh background task. 
 	;LV_ModifyCol()  ; Auto-size each column to fit its contents.
@@ -99,10 +112,10 @@ Return
 
 ButtonLoad:
 	SetTimer, QuickieFreshLV, off
-	SetTimer, FreshLoad, off
+	SetTimer, DeadCheckLV, off
 	File = CompList.txt
-	SetTimer, QuickieFreshLV, 5001
-	SetTimer, FreshLoad, 60000
+	SetTimer, QuickieFreshLV, %QuickRefreshInterval%
+	SetTimer, DeadCheckLV, %DeadRefreshInterval%
 	Gosub FreshLoad
 Return
 
@@ -190,8 +203,9 @@ if A_GuiEvent = R
 return
 
 FreshLoad:
+	GuiControl,text, StatusBox, Status: Loading Fresh...
 	SetTimer, QuickieFreshLV, off
-	SetTimer, RefreshListView, off																
+	SetTimer, DeadCheckLV, off																
 	Gui, ListView, DeadCompList
 	LV_Delete()
 	Gui, ListView, LiveCompList
@@ -217,42 +231,29 @@ FreshLoad:
 		}
 																								;Finished Importing data from file
 	Gosub QuickieFreshLV																		;Parse out the Null computers and quick refresh list at the same time?
-	SetTimer, QuickieFreshLV, 5001
-	SetTimer, RefreshListView, 60000
+	SetTimer, QuickieFreshLV, %QuickRefreshInterval%
+	SetTimer, DeadCheckLV, %DeadRefreshInterval%
+	GuiControl,text, StatusBox, Status: Idle
 Return
 
-/*
-RefreshListView is a sub that I'm not sure what it used to do....
-It might've been an attempt to refresh the dead computers? 
-But I've depreciated it and substituted the function to do a fresh load
-This is currently set to run every minute. So a dead machine will eventually come back to live after a minute. The main problem with this is that the LastSeen variable will also get updated when a FreshLoad happens
-BREAKFIX:
-	- Broke the LastSeen time by making it FreshLoad every time... Need to make an exception... 
-*/
-RefreshListView:
-	msgbox, starting refresh at %a_now%
-	/*SetTimer, QuickieFreshLV, off
-	SetTimer, RefreshListView, off
-	Gui, ListView, LiveCompList
-		tempcount := lv_getcount()
-		Loop, % lv_getcount()
-		{
-			LV_GetText(tempcompread, A_Index) 
-			LV_GetText(ComputerUpAddr, A_Index, 2) 
-			LV_GetText(UPStatus, A_Index,3) 
-			LV_GetText(PingTime, A_Index,4)
-			LV_GetText(LastSeen, A_Index,5)
-			;msgbox, %A_Index% with name %tempcompread% is being processed row number %A_EventInfo%. Computer: "%tempcompread%" IP: "%ComputerUpAddr%" Updating: "%UPStatus%" Computer on: "%CompOn%"
-				Gosub GetIP 
-				If CompOn = 1
-					Gosub GetUpdatestatus 		;Retrieves If computer is on and updating currently.
-			LV_Modify(A_Index,,tempcompread,ComputerUpAddr,UPStatus,PingTime,LastSeen)
-		}	
-	;MSGBOX, FINISHED WITH LIVECOMPLIST
+DeadCheckLV: 
+	GuiControlGet, StatusState, ,StatusBox
+	IfNotInString, StatusState, Idle
+		return
+	GuiControl,text, StatusBox, Status: Checking Dead...
+	SetTimer, QuickieFreshLV, off
+	SetTimer, DeadCheckLV, off
 	Gui, ListView, DeadCompList
 		tempcount := lv_getcount()
+		if (tempcount < 1) {
+			;msgbox uhh... 
+			SetTimer, QuickieFreshLV, %QuickRefreshInterval%
+			SetTimer, DeadCheckLV, %DeadRefreshInterval%
+			return
+		}
 		Loop, %tempcount%
 		{
+			;msgbox in the loop
 			Gui, ListView, DeadCompList
 			FromTheBot := tempcount - A_Index + 1
 			LV_GetText(tempcompread, FromTheBot) 
@@ -263,21 +264,20 @@ RefreshListView:
 			;msgbox, fromthebot = %FromTheBot%`ntempcompread = %tempcompread%
 			Gosub GetIP 
 			If (ComputerUpAddr != "Null")
-			{
+			{	
+				;msgbox reviving %ComputerUpAddr%
 				Gui, ListView, LiveCompList
 				LV_Add("", tempcompread, ComputerUpAddr, UPStatus, PingTime, LastSeen)
 				Gui, ListView, DeadCompList
 				LV_Delete(FromTheBot)
 			}
 		}	
-	SetTimer, QuickieFreshLV, 5001
-	SetTimer, RefreshListView, 60000
-	*/
-	gosub FreshLoad
-Return
-
+	SetTimer, QuickieFreshLV, %QuickRefreshInterval%
+	SetTimer, DeadCheckLV, %DeadRefreshInterval%
+return
 
 QuickieFreshLV:
+	GuiControl,text, StatusBox, Status: Quickie Refresh...
 	SetTimer, QuickieFreshLV, off
 	Loop
 	{
@@ -285,7 +285,8 @@ QuickieFreshLV:
 		If FoundANull = 0
 			Break
 	}
-	SetTimer, QuickieFreshLV, 5001
+	SetTimer, QuickieFreshLV, %QuickRefreshInterval%
+	GuiControl,text, StatusBox, Status: Idle
 Return
 
 QuickieGuts:
