@@ -19,6 +19,14 @@ How to fix?
 	Search for the tag "BREAKFIX" to see in-line errors reported
 
 Changelog:
+180419:
+	-	Trying to implement netbios name lookup. 
+		Running into issues where the program tries to use the name to find the machine's IP (in case the IP changed)
+		Name lookup using nbtstat works fine though
+		Need to write an exception for computers that were added as IP instead of computername... 
+	-	There was some code here that put the Row of the machine in the txt file on the dead comp table
+		but I question it's importance... It has been removed 180419
+
 180418_2:
 	-	Second commit of the day! Because I'm way too excited
 	-	FIXED THE STUPID BUG!!!! 
@@ -59,6 +67,9 @@ computername = NULL
 	AdminPass = %DecPass%
 	;Files called in this program
 	#Include Add_INI.ahk
+	
+	;Functions are being stripped out into their own libraries! FINALLY! 180419
+	#include GetNBName.ahk
 		
 	;These files will be loaded/checked when the program runs or compiles. Not necessary to keep in distribution
 	;	#Include UP_DEC.ahk
@@ -223,6 +234,13 @@ FreshLoad:
 			Break
 		tempcompread := A_LoopField
 		Gosub GetIP 																			;Retrieves ComputerUpAddr and CompOn and LastSeen
+		word := "."
+		hay := tempcompread
+		StringReplace, hay, hay, %word%, %word%, UseErrorLevel
+		count := ErrorLevel
+		If (count == 3) {																		;If IP instead of computer name, try to resolve name
+			;tempcompread := GetNBName(tempcompread, NBFile)
+		}
 		 If (CompOn = 1){
 			Gosub GetUpdatestatus 																;Retrieves If computer is on and updating currently.
 			;LastSeen := A_Hour . ":" . A_Min . ":" . A_Sec 
@@ -230,10 +248,12 @@ FreshLoad:
 		LV_Add("", tempcompread, ComputerUpAddr, UPStatus, PingTime, LastSeen)
 		}
 																								;Finished Importing data from file
+	;msgbox "competed freshload"
 	Gosub QuickieFreshLV																		;Parse out the Null computers and quick refresh list at the same time?
 	SetTimer, QuickieFreshLV, %QuickRefreshInterval%
 	SetTimer, DeadCheckLV, %DeadRefreshInterval%
 	GuiControl,text, StatusBox, Status: Idle
+	
 Return
 
 DeadCheckLV: 
@@ -292,6 +312,7 @@ Return
 QuickieGuts:
 	FoundANull = 0
 	Gui, ListView, LiveCompList
+	FileRead, tmpfilevar, %File%
 	Loop % LV_GetCount()
 	{
 		LV_GetText(tempcompread, A_Index, 1)  ; Get the text from the row's first field.
@@ -300,42 +321,27 @@ QuickieGuts:
 		LV_GetText(PingTime, A_Index,4)
 		LV_GetText(LastSeen, A_Index,5)
 		;msgbox, quicking this %tempcompread% at index %a_index%
-		If (ComputerUpAddr != "Null")
-			Gosub GetIP 					;Retrieves ComputerUpAddr and PingTime and LastSeen
-		Else If (ComputerUpAddr = "Null")
+		If (ComputerUpAddr != "Null") {
+			StringReplace , ComputerUpAddr, ComputerUpAddr, %A_Space%,,All
+			FoundIP := InStr(tmpfilevar, ComputerUpAddr)
+			;msgbox %tmpfilevar% `n`n %ComputerUpAddr%
+			;msgbox FoundIP = %FoundIP%
+			if (FoundIP > 1) {
+				CompName := tempcompread		;Added 180419 to make Quickie check IP only
+				tempcompread := ComputerUpAddr	;Added 180419 to make Quickie check IP only
+				Gosub GetIP 					;Retrieves ComputerUpAddr and PingTime and LastSeen
+				tempcompread := CompName		;Added 180419 to make Quickie check IP only
+			} else {
+				Gosub GetIP 
+			}
+		} Else If (ComputerUpAddr = "Null") 
 			{
 			;msgbox, foudn a null. %tempcompread%
+			LastRow := 0
+			; There was some code here that put the Row of the machine in the txt file on the screen..but I question it's importance... It has been removed 180419
+			FoundIP := InStr(tmpfilevar, ComputerUpAddr)
 			Gui, ListView, DeadCompList
-			/*
-			SameNameFound = 0
-			Loop % LV_GetCount()
-				{
-				RowNumber := LV_GetCount() - 
-				LV_GetText(DeadCompListName, A_Index)  ; Get the text from the row's first field.
-				If DeadCompListName = %tempcompread%
-					{
-					SameNameFound = 1
-					Break
-					}
-				}
-			*/
-			LastRow = 0
-			FileRead, tmpfilevar, %File%
-			Loop,Parse,tmpfilevar,`n
-				{
-				LastRow := LastRow + 1
-				If (A_LoopField = tempcompread)														; reached the end of the computer list
-					{
-					SameNameFound = 0
-					Break
-					}
-				}
-			;Msgbox last row = %lastrow%
-			If SameNameFound = 0
-				{
-				Gui, ListView, DeadCompList
-				LV_Add("", tempcompread, ComputerUpAddr, UPStatus, LastRow, LastSeen)
-				}
+			LV_Add("", tempcompread, ComputerUpAddr, UPStatus, LastRow, LastSeen)
 			Gui, ListView, LiveCompList
 			LV_Delete(A_Index)
 			FoundANull = 1
