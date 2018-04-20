@@ -19,6 +19,14 @@ How to fix?
 	Search for the tag "BREAKFIX" to see in-line errors reported
 
 Changelog:
+180419_3:
+	- 	SHIT. I could've totally used ping -a to resolve a netbios name without using nbtstat...
+		I may retool the function to use ping -a since it works way faster... 
+	-	No changes yet...
+	- 	Change user is now change creds, to better reflect what it does
+	-	Made it so it doesn't crash if CompList.txt isn't present. Creates a template file instead!
+		Unfortunately, due to the way I add computers to the bottom of the list, if the list ever gets "empty" like with just END, it doesn't add it back properly... 
+	
 180419_2:
 	-	Fixed race conditions with Adding computers while existing list was being updated
 	- 	REALLY should consider implementing a scheduler... Too many race conditions.... 
@@ -73,6 +81,7 @@ computername = NULL
 	AdminPass = %DecPass%
 	;Files called in this program
 	#Include Add_INI.ahk
+	File := "CompList.txt"
 	
 	;Functions are being stripped out into their own libraries! FINALLY! 180419
 	#include GetNBName.ahk
@@ -118,7 +127,7 @@ Gui,Add,Button,x156 y76 w78 h23 gDeadCheckLV,Refresh Dead
 Gui,Add,ListView,x346 y323 w449 h195 vDeadCompList gMyListView2 AltSubmit Checked Grid,Computer Name|IP Address IPV4|Updates Running|Line|Last Seen
 Gui,Add,Text,x9 y168 w322 h18,---------------------------------------------------------------------------------------------------------------------------------------------------------
 Gui,Add,Button,x34 y60 w43 h23 gButtonLoad,Load
-Gui,Add,Button,x257 y56 w59 h36 gButtonChangeUser,Change User
+Gui,Add,Button,x257 y56 w59 h36 gButtonChangeUser,Change Creds
 Gui,Show, w811 h536 ,
 	Sleep 500
 	Gosub ButtonLoad ; MAIN: This subroutine starts FreshLoad which starts the timers to do the computer refresh background task. 
@@ -130,7 +139,6 @@ Return
 ButtonLoad:
 	SetTimer, QuickieFreshLV, off
 	SetTimer, DeadCheckLV, off
-	File = CompList.txt
 	SetTimer, QuickieFreshLV, %QuickRefreshInterval%
 	SetTimer, DeadCheckLV, %DeadRefreshInterval%
 	Gosub FreshLoad
@@ -240,8 +248,10 @@ FreshLoad:
 	FileRead,tmpfilevar,%File%
 	If (ErrorLevel=1)
 	{
-	  Msgbox,16,Fatal Error, Error trying to read`n%file%
-	  ExitApp
+	  ;Msgbox,16,Fatal Error, Error trying to read`n%file%
+	  ;ExitApp
+	  FileAppend,LOCALHOST`nEND,%File%
+	  FileRead,tmpfilevar,%File%
 	}
 	Loop,Parse,tmpfilevar,`n
 		{

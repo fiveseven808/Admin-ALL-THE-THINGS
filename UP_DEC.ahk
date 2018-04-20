@@ -4,7 +4,9 @@ File = Admin.bin
 FileRead,tmpfilevar,%File%
 	If (ErrorLevel=1)
 	{
-	  Msgbox,16,Fatal Error, Error trying to read`n%file%
+	  Msgbox,16,Critical Error, Error trying to read`n%file%
+	  Msgbox, Maybe the file just doesn't exist? `nPlease enter new windows credentials on the following screen`n`nWhen completed, please restart AATT.ahk
+	  Run UP_ENC.ahk
 	  ExitApp
 	}
 	Loop,Parse,tmpfilevar,`n
