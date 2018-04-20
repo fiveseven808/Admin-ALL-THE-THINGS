@@ -50,3 +50,6 @@ Temporary Items
 Admin.bin
 CompList.txt
 threat.txt
+
+# Temporary Files
+*.tmp

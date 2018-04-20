@@ -19,6 +19,12 @@ How to fix?
 	Search for the tag "BREAKFIX" to see in-line errors reported
 
 Changelog:
+180419_2:
+	-	Fixed race conditions with Adding computers while existing list was being updated
+	- 	REALLY should consider implementing a scheduler... Too many race conditions.... 
+	- 	Fixed computer deletion from file. Issue stemmed from the global variable tmpfilevar being used in multiple places... Need to move away from global variables... 
+	- 	May have created a bug where you can't use any of the buttons due to a line return being trimmed off in the old code... should be fixed though... 
+
 180419:
 	-	Trying to implement netbios name lookup. 
 		Running into issues where the program tries to use the name to find the machine's IP (in case the IP changed)
@@ -79,7 +85,7 @@ computername = NULL
 
 Blahgui:
 {
-Gui,Add,Text,x65 y18 w204 h15 -Wrap Center,Admin ALL THE THINGS v4.1804.18
+Gui,Add,Text,x65 y18 w204 h15 -Wrap Center,Admin ALL THE THINGS v4.1804.19
 Gui,Add,Edit,x114 y50 w109 h21 vcomputername 1 Uppercase,Computer Name
 Gui,Add,Button,x101 y76 w43 h23 Default,Add
 Gui,Add,Text,x92 y32 w163 h18,---------------------------------------------------
@@ -152,18 +158,23 @@ if A_GuiEvent = DoubleClick
 {
     ;ToolTip, You %a_guievent%ed row number %A_EventInfo%. Computer: "%RowText%" IP: "%IPText%" Updating: "%UpdateText%" Computer on: "%OnText%"
 	;SetTimer, RemoveToolTip, 5000
-	StringTrimRight, RowText, RowText, 1 
+	;StringTrimRight, RowText, RowText, 1 
 	ComputerName = %RowText%
 	GuiControl,text, thecontrolled, Current controlled Computer is `n%computername%
 }
 if A_GuiEvent = R
 {
+	GuiControlGet, StatusState, ,StatusBox
+	IfNotInString, StatusState, Idle
+		return
+	FileRead, tmpfilevar, %File%
 	Loop,Parse,tmpfilevar,`n
 		{
 		;msgbox, current linecontains %A_LoopField%
 		If (A_LoopField = "END") 	
 			Break
-		If (A_LoopField = RowText) 	
+		;If (A_LoopField = RowText) 	
+		IfInString, A_LoopField, %RowText% 	
 			DeleteRow := A_Index 																		
 		}
     ToolTip, Lol Deleting Computer %RowText%
@@ -189,18 +200,23 @@ if A_GuiEvent = DoubleClick
 {
     ;ToolTip, You %a_guievent%ed row number %A_EventInfo%. Computer: "%RowText%" IP: "%IPText%" Updating: "%UpdateText%" Computer on: "%OnText%"
 	;SetTimer, RemoveToolTip, 5000
-	StringTrimRight, RowText, RowText, 1 
+	;StringTrimRight, RowText, RowText, 1 
 	ComputerName = %RowText%
 	GuiControl,text, thecontrolled, Current controlled Computer is `n%computername%
 }
 if A_GuiEvent = R
 {
+	GuiControlGet, StatusState, ,StatusBox
+	IfNotInString, StatusState, Idle
+		return 
+	FileRead, tmpfilevar, %File%
 	Loop,Parse,tmpfilevar,`n
 		{
-		;msgbox, current linecontains %A_LoopField%
+		;msgbox, current linecontains %A_LoopField% | looking for %RowText% | 
 		If (A_LoopField = "END") 	
 			Break
-		If (A_LoopField = RowText) 	
+		;If (A_LoopField = RowText) 	
+		IfInString, A_LoopField, %RowText% 	
 			DeleteRow := A_Index 																		
 		}
     ToolTip, Lol Deleting Computer %RowText%
@@ -233,7 +249,10 @@ FreshLoad:
 		If (A_LoopField = "END") 																; reached the end of the IP address list
 			Break
 		tempcompread := A_LoopField
+		StringReplace, tempcompread_clean, tempcompread, `r, , a
+		StringReplace, tempcompread, tempcompread_clean, `n, , a
 		Gosub GetIP 																			;Retrieves ComputerUpAddr and CompOn and LastSeen
+		;msgbox %tempcompread% | %ComputerUPAddr% 
 		word := "."
 		hay := tempcompread
 		StringReplace, hay, hay, %word%, %word%, UseErrorLevel
@@ -299,18 +318,12 @@ return
 QuickieFreshLV:
 	GuiControl,text, StatusBox, Status: Quickie Refresh...
 	SetTimer, QuickieFreshLV, off
-	Loop
-	{
-		Gosub QuickieGuts
-		If FoundANull = 0
-			Break
-	}
+	Gosub QuickieGuts
 	SetTimer, QuickieFreshLV, %QuickRefreshInterval%
 	GuiControl,text, StatusBox, Status: Idle
 Return
 
 QuickieGuts:
-	FoundANull = 0
 	Gui, ListView, LiveCompList
 	FileRead, tmpfilevar, %File%
 	Loop % LV_GetCount()
@@ -344,7 +357,6 @@ QuickieGuts:
 			LV_Add("", tempcompread, ComputerUpAddr, UPStatus, LastRow, LastSeen)
 			Gui, ListView, LiveCompList
 			LV_Delete(A_Index)
-			FoundANull = 1
 			Break
 			}
 		If CompOn = 1
@@ -355,12 +367,16 @@ Return
 
 RemoveLines(filename, startingLine, numOfLines)
 {
-       Loop, Read, %filename%
-               if ( A_Index < StartingLine )
-                       || ( A_Index >= StartingLine + numOfLines )
-                               ret .= "`r`n" . A_LoopReadLine
-       FileDelete, % FileName
-       FileAppend, % SubStr(ret, 3), % FileName
+	;msgbox %filename% | %startingLine% | %numOfLines%
+    Loop, Read, %filename%
+            if ( A_Index < StartingLine )
+                    || ( A_Index >= StartingLine + numOfLines )
+                            ret .= "`r`n" . A_LoopReadLine
+    FileDelete, %FileName%
+	;msgbox %ret%
+    FileAppend, % SubStr(ret, 3), %FileName%
+	;msgbox %errorlevel%
+	;msgbox done
 }
 Return
 
@@ -646,6 +662,8 @@ Return
 return
 
 AddCompToBottom:
+	SetTimer, QuickieFreshLV, off
+	SetTimer, DeadCheckLV, off	
 	LastRow = 0
 	FileRead, tmpfilevar, %File%
 	Loop,Parse,tmpfilevar,`n

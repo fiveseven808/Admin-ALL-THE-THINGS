@@ -17,9 +17,11 @@ UPStatus := Null
 CheckComp:
 	Loop
 	{
-	PingCmd:="ping " . tempcompread . " -4 -n 1 -w 150>" . PingResults
+	PingCmd:="ping " . tempcompread . " -4 -n 1 -w 150 > " . PingResults
+	;msgbox %pingcmd%
 	RunWait %comspec% /c """%PingCmd%""",,Hide
-	
+	FileRead, tmpfilevar, %PingResults%
+	;msgbox %tmpfilevar%
 	Loop
 	  {
 		 PingError:=false
