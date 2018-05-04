@@ -19,6 +19,17 @@ How to fix?
 	Search for the tag "BREAKFIX" to see in-line errors reported
 
 Changelog:
+180426:
+	- 	What is the point of the FoundIP variable? 
+		Trace and figure this out...  Remove associated functions if useless
+	-	Made IP/Ping checking way more reliable by doing a second single packet ping if the first one fails.
+		No more random "Nulls" everywhere, having to wait for another update to get data. 
+	- 	Fixed bigass bug where nulls were being added to the dead pile. This was due to 
+		a fixed loop size, vs a conditional loop, and stuff being removed from the loop
+		by the loop.
+	- 	Also found out that computers after ones that were dead were not being checked. 
+		Changed the indexing variable to one controlled by me, and that seems to have fixed things. 
+		
 180419_3:
 	- 	SHIT. I could've totally used ping -a to resolve a netbios name without using nbtstat...
 		I may retool the function to use ping -a since it works way faster... 
@@ -71,8 +82,9 @@ Bugs:
 	- 	I assume that everything is broken... 
 	
 */
-QuickRefreshInterval := 5001
-DeadRefreshInterval := 60000
+QuickRefreshInterval := 10001			;10 seconds 
+DeadRefreshInterval := 60000			;1 minute
+RDPCheckInterval := 120000				;2 minutes because it takes forever
 
 Gui +Resize
 computername = NULL
@@ -139,8 +151,10 @@ Return
 ButtonLoad:
 	SetTimer, QuickieFreshLV, off
 	SetTimer, DeadCheckLV, off
+	SetTimer, RDPCheckLV, off
 	SetTimer, QuickieFreshLV, %QuickRefreshInterval%
 	SetTimer, DeadCheckLV, %DeadRefreshInterval%
+	SetTimer, RDPCheckLV, %RDPCheckInterval%
 	Gosub FreshLoad
 Return
 
@@ -298,10 +312,12 @@ DeadCheckLV:
 			;msgbox uhh... 
 			SetTimer, QuickieFreshLV, %QuickRefreshInterval%
 			SetTimer, DeadCheckLV, %DeadRefreshInterval%
+			GuiControl,text, StatusBox, Status: Idle
 			return
 		}
 		Loop, %tempcount%
 		{
+			
 			;msgbox in the loop
 			Gui, ListView, DeadCompList
 			FromTheBot := tempcount - A_Index + 1
@@ -311,8 +327,9 @@ DeadCheckLV:
 			LV_GetText(PingTime, FromTheBot,4)
 			LV_GetText(LastSeen, FromTheBot,5)
 			;msgbox, fromthebot = %FromTheBot%`ntempcompread = %tempcompread%
+			GuiControl,text, StatusBox, Status: Checking Dead: %tempcompread% [%A_Index%]
 			Gosub GetIP 
-			If (ComputerUpAddr != "Null")
+			If (PingTime != -1)
 			{	
 				;msgbox reviving %ComputerUpAddr%
 				Gui, ListView, LiveCompList
@@ -323,6 +340,7 @@ DeadCheckLV:
 		}	
 	SetTimer, QuickieFreshLV, %QuickRefreshInterval%
 	SetTimer, DeadCheckLV, %DeadRefreshInterval%
+	GuiControl,text, StatusBox, Status: Idle
 return
 
 QuickieFreshLV:
@@ -336,15 +354,22 @@ Return
 QuickieGuts:
 	Gui, ListView, LiveCompList
 	FileRead, tmpfilevar, %File%
-	Loop % LV_GetCount()
+	Calc_Index = 0
+	Loop
 	{
-		LV_GetText(tempcompread, A_Index, 1)  ; Get the text from the row's first field.
-		LV_GetText(ComputerUpAddr, A_Index, 2) 
-		LV_GetText(UPStatus, A_Index,3) 
-		LV_GetText(PingTime, A_Index,4)
-		LV_GetText(LastSeen, A_Index,5)
-		;msgbox, quicking this %tempcompread% at index %a_index%
-		If (ComputerUpAddr != "Null") {
+		Calc_Index := Calc_Index + 1
+		LV_GetText(tempcompread, Calc_Index, 1)  ; Get the text from the row's first field.
+		LV_GetText(ComputerUpAddr, Calc_Index, 2) 
+		LV_GetText(UPStatus, Calc_Index,3) 
+		LV_GetText(PingTime, Calc_Index,4)
+		LV_GetText(LastSeen, Calc_Index,5)
+		If (LastSeen = "")
+		{
+			Break
+		}
+		;msgbox, quicking this %tempcompread% at index %Calc_Index%
+		;If (ComputerUpAddr != "Null") {
+		GuiControl,text, StatusBox, Status: Quickie Checking: %tempcompread% [%Calc_Index%]
 			StringReplace , ComputerUpAddr, ComputerUpAddr, %A_Space%,,All
 			FoundIP := InStr(tmpfilevar, ComputerUpAddr)
 			;msgbox %tmpfilevar% `n`n %ComputerUpAddr%
@@ -357,22 +382,72 @@ QuickieGuts:
 			} else {
 				Gosub GetIP 
 			}
-		} Else If (ComputerUpAddr = "Null") 
+		;} Else 
+		If (PingTime = -1) 
 			{
-			;msgbox, foudn a null. %tempcompread%
-			LastRow := 0
-			; There was some code here that put the Row of the machine in the txt file on the screen..but I question it's importance... It has been removed 180419
-			FoundIP := InStr(tmpfilevar, ComputerUpAddr)
-			Gui, ListView, DeadCompList
-			LV_Add("", tempcompread, ComputerUpAddr, UPStatus, LastRow, LastSeen)
-			Gui, ListView, LiveCompList
-			LV_Delete(A_Index)
-			Break
+			Gosub GetIP 						; Check one last time before sending to graveyard
+			If (PingTime = -1) {		; Only if it's dead a second time send it to the graveyard
+				;msgbox, foudn a null. name = %tempcompread% ip = %ComputerUPAddr% and pingtime = %pingtime% 
+				GuiControl,text, StatusBox, Status: Quickie KILLING: %tempcompread% [%Calc_Index%]
+				LastRow := 0
+				; There was some code here that put the Row of the machine in the txt file on the screen..but I question it's importance... It has been removed 180419
+				FoundIP := InStr(tmpfilevar, ComputerUpAddr)
+				Gui, ListView, DeadCompList
+				LV_Add("", tempcompread, ComputerUpAddr, UPStatus, LastRow, LastSeen)
+				Gui, ListView, LiveCompList
+				LV_Delete(Calc_Index)
+				Calc_Index := Calc_Index - 1
+				Continue
+				}
 			}
 		If CompOn = 1
 			Gosub GetUpdatestatus 		;Retrieves If computer is on and updating currently.
-		LV_Modify(A_Index,,tempcompread,ComputerUpAddr,UPStatus,PingTime,LastSeen)
-	}
+		LV_Modify(Calc_Index,,tempcompread,ComputerUpAddr,UPStatus,PingTime,LastSeen)
+	} 
+Return
+
+RDPCheckLV:
+Return 									;Do Nothing right now, don't break shit
+
+	GuiControlGet, StatusState, ,StatusBox
+	IfNotInString, StatusState, Idle
+		return
+	GuiControl,text, StatusBox, Status: Checking RDP...
+	SetTimer, QuickieFreshLV, off
+	SetTimer, DeadCheckLV, off
+	SetTimer, RDPCheckLV, off
+	Gui, ListView, LiveCompList
+	Loop
+		{
+			Calc_Index := Calc_Index + 1
+			LV_GetText(tempcompread, Calc_Index, 1)  ; Get the text from the row's first field.
+			LV_GetText(ComputerUpAddr, Calc_Index, 2) 
+			LV_GetText(UPStatus, Calc_Index,3) 
+			LV_GetText(PingTime, Calc_Index,4)
+			LV_GetText(LastSeen, Calc_Index,5)
+			If (LastSeen = "")
+			{
+				Break
+			}
+			If (UPStatus = "RDP Yes!") 
+			{
+				Continue							; This is a one time thing
+			}
+			/*
+			Run a powershell script here that mounts a drive on the selected machine
+			Then based on what the script returns 1? 0? , choose the bits below 
+			*/
+			If (1) {
+				UPStatus = "RDP Yes!"
+			} else {
+				UPStatus = " - "
+			}
+			;Result:
+			LV_Modify(Calc_Index,,tempcompread,ComputerUpAddr,UPStatus,PingTime,LastSeen)
+		} 	
+	SetTimer, QuickieFreshLV, %QuickRefreshInterval%
+	SetTimer, DeadCheckLV, %DeadRefreshInterval%
+	SetTimer, RDPCheckLV, %RDPCheckInterval%
 Return
 
 RemoveLines(filename, startingLine, numOfLines)

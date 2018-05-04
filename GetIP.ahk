@@ -14,6 +14,7 @@ PingErr5:="Ping Request could not find host"
 ; tempcompread = d3410ln43
 ComputerUPAddr = Null
 UPStatus := Null
+PingTime := -1
 CheckComp:
 	Loop
 	{
