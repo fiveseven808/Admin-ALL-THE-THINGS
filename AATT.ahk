@@ -19,6 +19,10 @@ How to fix?
 	Search for the tag "BREAKFIX" to see in-line errors reported
 
 Changelog:
+180509:
+	- 	Tried adding a Last Dead variable to things. Supposed to show when the computer last went down]
+		Not sure if it works... but I don't think it breaks anything so I'm going to commit it. 
+	
 180426:
 	- 	What is the point of the FoundIP variable? 
 		Trace and figure this out...  Remove associated functions if useless
@@ -134,13 +138,13 @@ Gui,Add,Button,x203 y315 w112 h23 gButtonCleanup,Cleanup Files
 Gui,Add,Button,x32 y192 w109 h23 gButtonMSTSC,Remote In
 Gui,Add,Text,x182 y430 w163 h18,---------------------------------------------------
 Gui,Add,Button,x202 y446 w115 h25 gButtonHotkeyInfo,HotKey Help
-Gui,Add,ListView,x346 y11 w449 h300 vLiveCompList gMyListView AltSubmit Checked Grid,Computer Name|IP Address IPV4|Updates Running|Ping|Last Seen
+Gui,Add,ListView,x346 y11 w520 h300 vLiveCompList gMyListView AltSubmit Checked Grid,Computer Name|IP Address IPV4|Updates Running|Ping|Last Seen|Last Dead
 Gui,Add,Button,x156 y76 w78 h23 gDeadCheckLV,Refresh Dead
-Gui,Add,ListView,x346 y323 w449 h195 vDeadCompList gMyListView2 AltSubmit Checked Grid,Computer Name|IP Address IPV4|Updates Running|Line|Last Seen
+Gui,Add,ListView,x346 y323 w520 h195 vDeadCompList gMyListView2 AltSubmit Checked Grid,Computer Name|IP Address IPV4|Updates Running|Line|Last Seen|Last Dead 
 Gui,Add,Text,x9 y168 w322 h18,---------------------------------------------------------------------------------------------------------------------------------------------------------
 Gui,Add,Button,x34 y60 w43 h23 gButtonLoad,Load
 Gui,Add,Button,x257 y56 w59 h36 gButtonChangeUser,Change Creds
-Gui,Show, w811 h536 ,
+Gui,Show, w881 h536 ,
 	Sleep 500
 	Gosub ButtonLoad ; MAIN: This subroutine starts FreshLoad which starts the timers to do the computer refresh background task. 
 	;LV_ModifyCol()  ; Auto-size each column to fit its contents.
@@ -275,7 +279,9 @@ FreshLoad:
 		tempcompread := A_LoopField
 		StringReplace, tempcompread_clean, tempcompread, `r, , a
 		StringReplace, tempcompread, tempcompread_clean, `n, , a
-		Gosub GetIP 																			;Retrieves ComputerUpAddr and CompOn and LastSeen
+		Gosub GetIP 
+		LastDead := -1
+		;Retrieves ComputerUpAddr and CompOn and LastSeen
 		;msgbox %tempcompread% | %ComputerUPAddr% 
 		word := "."
 		hay := tempcompread
@@ -287,8 +293,10 @@ FreshLoad:
 		 If (CompOn = 1){
 			Gosub GetUpdatestatus 																;Retrieves If computer is on and updating currently.
 			;LastSeen := A_Hour . ":" . A_Min . ":" . A_Sec 
+		 } else {
+			LastDead := A_Hour . ":" . A_Min . ":" . A_Sec
 		 }
-		LV_Add("", tempcompread, ComputerUpAddr, UPStatus, PingTime, LastSeen)
+		LV_Add("", tempcompread, ComputerUpAddr, UPStatus, PingTime, LastSeen, LastDead)
 		}
 																								;Finished Importing data from file
 	;msgbox "competed freshload"
@@ -326,6 +334,7 @@ DeadCheckLV:
 			LV_GetText(UPStatus, FromTheBot,3) 
 			LV_GetText(PingTime, FromTheBot,4)
 			LV_GetText(LastSeen, FromTheBot,5)
+			LV_GetText(LastDead, FromTheBot,6)
 			;msgbox, fromthebot = %FromTheBot%`ntempcompread = %tempcompread%
 			GuiControl,text, StatusBox, Status: Checking Dead: %tempcompread% [%A_Index%]
 			Gosub GetIP 
@@ -333,7 +342,7 @@ DeadCheckLV:
 			{	
 				;msgbox reviving %ComputerUpAddr%
 				Gui, ListView, LiveCompList
-				LV_Add("", tempcompread, ComputerUpAddr, UPStatus, PingTime, LastSeen)
+				LV_Add("", tempcompread, ComputerUpAddr, UPStatus, PingTime, LastSeen, LastDead)
 				Gui, ListView, DeadCompList
 				LV_Delete(FromTheBot)
 			}
@@ -363,6 +372,7 @@ QuickieGuts:
 		LV_GetText(UPStatus, Calc_Index,3) 
 		LV_GetText(PingTime, Calc_Index,4)
 		LV_GetText(LastSeen, Calc_Index,5)
+		LV_GetText(LastDead, Calc_Index,6)
 		If (LastSeen = "")
 		{
 			Break
@@ -393,7 +403,8 @@ QuickieGuts:
 				; There was some code here that put the Row of the machine in the txt file on the screen..but I question it's importance... It has been removed 180419
 				FoundIP := InStr(tmpfilevar, ComputerUpAddr)
 				Gui, ListView, DeadCompList
-				LV_Add("", tempcompread, ComputerUpAddr, UPStatus, LastRow, LastSeen)
+				LastDead := LastSeen
+				LV_Add("", tempcompread, ComputerUpAddr, UPStatus, LastRow, LastSeen, LastDead)
 				Gui, ListView, LiveCompList
 				LV_Delete(Calc_Index)
 				Calc_Index := Calc_Index - 1
@@ -402,7 +413,7 @@ QuickieGuts:
 			}
 		If CompOn = 1
 			Gosub GetUpdatestatus 		;Retrieves If computer is on and updating currently.
-		LV_Modify(Calc_Index,,tempcompread,ComputerUpAddr,UPStatus,PingTime,LastSeen)
+		LV_Modify(Calc_Index,,tempcompread,ComputerUpAddr,UPStatus,PingTime,LastSeen,LastDead)
 	} 
 Return
 
